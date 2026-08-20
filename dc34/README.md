@@ -10,8 +10,10 @@ no network dependency beyond whatever inference endpoint you point the robot bra
 
 ## What's not included
 
-- **Q6 (Badge Secret)** — was solved on the physical RHC badge hardware; can't be
-  replayed standalone.
+- **Q6 & Q7 (Badge challenges)** — were solved on the physical RHC badge hardware,
+  so they can't be replayed standalone. Their full write-up and CTF code live in a
+  separate repo: [robotichackingcommunity/rhc-badge-firmware](https://github.com/robotichackingcommunity/rhc-badge-firmware/)
+  (see its [`writeup/`](https://github.com/robotichackingcommunity/rhc-badge-firmware/tree/main/writeup) folder).
 - **The scoreboard** — flags are checked locally instead (see below).
 - **Multi-tenant provisioning / reverse proxy** — you get one container, one player.
 
