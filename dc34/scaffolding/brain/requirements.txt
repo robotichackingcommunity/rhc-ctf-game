@@ -1,0 +1,24 @@
+# Brain sidecar dependencies
+# Install with: pip install -r requirements.txt
+
+# API server
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+
+# Config
+pyyaml>=6.0
+
+# Image handling
+Pillow>=10.0
+
+# openai backend (vLLM / llama.cpp / Ollama /v1)
+openai>=1.0
+
+# ollama backend
+ollama>=0.6
+
+# transformers backend (in-process inference, dev / Mac MPS)
+# Uncomment if using BRAIN_BACKEND=transformers instead of a remote endpoint
+# torch>=2.2
+# transformers>=4.40

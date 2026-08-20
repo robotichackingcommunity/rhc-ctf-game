@@ -1,0 +1,461 @@
+<?xml version="1.0" ?>
+<!--
+  RoboHack AI CTF — MuJoCo scene with full Reachy Mini Lite + LeKiwi.
+  Run from ctf_scene/:
+    mjpython run_ctf.py
+-->
+<mujoco model="robohack_ctf_room">
+  <option gravity="0 0 -9.81"/>
+
+  <!-- Reachy Mini full model — brings its own <compiler meshdir=...>, <default>, <actuator>, <worldbody> content -->
+  <include file="reachy_mini_abs.xml"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0 0 0 0"/>
+    <global azimuth="160" elevation="-20" offwidth="1280" offheight="1280"/>
+  </visual>
+
+  <!-- ===== ASSETS ===== -->
+  <asset>
+    <!-- Floor / skybox -->
+    <texture type="skybox" file="textures/cosmos-skybox.png"/>
+    <texture type="2d" name="groundplane" file="textures/cosmos-ground-0.png"/>
+    <material name="groundplane" texture="groundplane" texuniform="true"
+              texrepeat="1 1" reflectance="0.1" emission="0.8"/>
+
+    <!-- Cosmos ground patches — 5 independently-generated starfield textures laid over
+         the infinite groundplane in a ring around the room, so no repeating pattern is
+         visible from any camera (each patch's stars are unique, not a tiled repeat) -->
+    <texture type="2d" name="tex_cosmos_ground_1" file="textures/cosmos-ground-1.png"/>
+    <texture type="2d" name="tex_cosmos_ground_2" file="textures/cosmos-ground-2.png"/>
+    <texture type="2d" name="tex_cosmos_ground_3" file="textures/cosmos-ground-3.png"/>
+    <texture type="2d" name="tex_cosmos_ground_4" file="textures/cosmos-ground-4.png"/>
+    <material name="mat_cosmos_ground_1" texture="tex_cosmos_ground_1" texuniform="true" reflectance="0.1" emission="0.8"/>
+    <material name="mat_cosmos_ground_2" texture="tex_cosmos_ground_2" texuniform="true" reflectance="0.1" emission="0.8"/>
+    <material name="mat_cosmos_ground_3" texture="tex_cosmos_ground_3" texuniform="true" reflectance="0.1" emission="0.8"/>
+    <material name="mat_cosmos_ground_4" texture="tex_cosmos_ground_4" texuniform="true" reflectance="0.1" emission="0.8"/>
+
+    <!-- Q1 room floor patch — wood texture, near-zero reflectance, laid over
+         the base floor to mark the "room" area without changing the rest of the scene -->
+    <texture type="2d" name="tex_room_floor" file="textures/wood-texture.png"/>
+    <material name="mat_room_floor" texture="tex_room_floor" texuniform="true"
+              texrepeat="5 10" reflectance="0.05"/>
+
+    <!-- CTF flag textures -->
+    <texture type="2d" name="tex_restricted_flag" file="flags/restricted_flag.png"/>
+    <texture type="2d" name="tex_painting_flag"   file="flags/painting_flag.png"/>
+    <texture type="2d" name="tex_screen_flag"     file="flags/screen_flag.png"/>
+    <material name="mat_restricted_flag" texture="tex_restricted_flag" emission="1"/>
+    <material name="mat_painting_flag"   texture="tex_painting_flag"   emission="1"/>
+
+    <!-- Q2 locked-zone cover — shown instead of the flag until unlocked + LeKiwi is inside -->
+    <texture type="2d" name="tex_q2_painting" file="textures/Q2_painting.png"/>
+    <material name="mat_q2_painting" texture="tex_q2_painting" emission="1"/>
+
+    <!-- Q3 decorative painting — Mona Lisa/robot artwork on the hinged frame's front face -->
+    <texture type="cube" name="tex_mona_lisa_robot" file="textures/mona-lisa-robot.png"/>
+    <material name="mat_mona_lisa_robot" texture="tex_mona_lisa_robot" texuniform="false" emission="1"/>
+    <material name="mat_screen_flag"     texture="tex_screen_flag"     emission="1"/>
+
+    <!-- Q4 hint — Rthena SOC console showing a ROS2/DDS anomalous-subscription
+         alert (a direct pointer at the hidden-topic solve mechanic). Static
+         decorative screen, no unlock state — visible from the start. -->
+    <texture type="2d" name="tex_soc_console" file="textures/Rthena_ROS2_RSOC.png"/>
+    <material name="mat_soc_console" texture="tex_soc_console" emission="1"/>
+
+    <!-- ===== Q5 cube-sorting assets (placeholder art — architect swaps later) ===== -->
+    <!-- Numbered cube faces: color + baked value digit (red=2, blue=4, green=5) -->
+    <texture type="cube" name="tex_cube_2" file="textures/cube_2.png"/>
+    <texture type="cube" name="tex_cube_4" file="textures/cube_4.png"/>
+    <texture type="cube" name="tex_cube_5" file="textures/cube_5.png"/>
+    <material name="mat_cube_2" texture="tex_cube_2" emission="0.4"/>
+    <material name="mat_cube_4" texture="tex_cube_4" emission="0.4"/>
+    <material name="mat_cube_5" texture="tex_cube_5" emission="0.4"/>
+    <!-- Zone tiles: baked 1/2/3 label -->
+    <texture type="2d" name="tex_zone_1" file="textures/zone_1.png"/>
+    <texture type="2d" name="tex_zone_2" file="textures/zone_2.png"/>
+    <texture type="2d" name="tex_zone_3" file="textures/zone_3.png"/>
+    <material name="mat_zone_1" texture="tex_zone_1" emission="0.6"/>
+    <material name="mat_zone_2" texture="tex_zone_2" emission="0.6"/>
+    <material name="mat_zone_3" texture="tex_zone_3" emission="0.6"/>
+    <!-- Solved check-mark overlay (toggled opaque per zone by sim.py) -->
+    <texture type="2d" name="tex_zone_check" file="textures/zone_check.png"/>
+    <material name="mat_zone_check" texture="tex_zone_check" emission="1"/>
+    <!-- Q5 flag "wallpaper" — covers most of the desk, revealed when the goal
+         button is pressed. cube_flag.png is 1248x832 (3:2); the tile geom below
+         is sized to that aspect ratio so the art isn't stretched. -->
+    <texture type="2d" name="tex_q5_flag" file="flags/cube_flag.png"/>
+    <material name="mat_q5_flag" texture="tex_q5_flag" emission="1"/>
+
+    <!-- LeKiwi materials -->
+    <material name="lekiwi_white" rgba="1 1 1 1"/>
+    <material name="lekiwi_black" rgba="0.1 0.1 0.1 1"/>
+
+    <!-- LeKiwi meshes — absolute paths so no meshdir conflict with Reachy Mini -->
+    <mesh name="base_plate"             file="meshes/base_plate.stl"             scale="0.001 0.001 0.001"/>
+    <mesh name="battery"                file="meshes/battery.stl"                scale="0.001 0.001 0.001"/>
+    <mesh name="lekiwi_camera"          file="meshes/camera.stl"                 scale="0.001 0.001 0.001"/>
+    <mesh name="camera_mount"           file="meshes/camera_mount.stl"           scale="0.001 0.001 0.001"/>
+    <mesh name="drive_motor_mount"      file="meshes/drive_motor_mount.stl"      scale="0.001 0.001 0.001"/>
+    <mesh name="hex_standoff"           file="meshes/hex_standoff.stl"           scale="0.001 0.001 0.001"/>
+    <mesh name="lipo_battery_mount"     file="meshes/lipo_battery_mount.stl"     scale="0.001 0.001 0.001"/>
+    <mesh name="servo_controller_mount" file="meshes/servo_controller_mount.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="sbc_case_bottom"        file="meshes/sbc_case_bottom.stl"        scale="0.001 0.001 0.001"/>
+    <mesh name="sbc_case_top"           file="meshes/sbc_case_top.stl"           scale="0.001 0.001 0.001"/>
+    <mesh name="servo_motor"            file="meshes/servo_motor.stl"            scale="0.001 0.001 0.001"/>
+    <mesh name="wheel"                  file="meshes/wheel.stl"                  scale="0.001 0.001 0.001"/>
+    <mesh name="wheel_hub"              file="meshes/wheel_hub.stl"              scale="0.001 0.001 0.001"/>
+
+    <!-- LeKiwi arm — SO-ARM100, attached onto the base plate below -->
+    <model name="so_arm100" file="so_arm100.xml"/>
+  </asset>
+
+  <!-- LeKiwi defaults -->
+  <default>
+    <default class="drive_motor_mount">
+      <geom type="mesh" mesh="drive_motor_mount" pos="0 0 0" euler="0 0 0"/>
+    </default>
+    <default class="servo_motor">
+      <geom type="mesh" mesh="servo_motor" pos="0 0 0" euler="0 0 0"/>
+    </default>
+    <default class="wheel_hub">
+      <geom type="mesh" mesh="wheel_hub" pos="0 0 0" euler="0 0 0"/>
+      <joint type="hinge" axis="0.0 0.0 1.0" pos="0.0 0.0 0.0"/>
+    </default>
+    <default class="wheel_visual">
+      <geom type="mesh" mesh="wheel" pos="0 0 0" euler="0 0 0"
+            material="lekiwi_white" group="0" density="0" contype="0" conaffinity="0"/>
+    </default>
+    <default class="wheel_collision">
+      <geom type="capsule" size="0.051 0.001" pos="0 0 0" euler="0 0 0"
+            friction="1.0 0.05 0.001" solref="0.10 0.7" solimp="0.3 0.6 0.001"
+            rgba="1 0 0 0" group="0"/>
+    </default>
+  </default>
+
+  <!-- LeKiwi actuators -->
+  <actuator>
+    <velocity name="base_left_wheel"  joint="base_left_wheel_joint"  kv="1" ctrlrange="-3.14 3.14"/>
+    <velocity name="base_right_wheel" joint="base_right_wheel_joint" kv="1" ctrlrange="-3.14 3.14"/>
+    <velocity name="base_back_wheel"  joint="base_back_wheel_joint"  kv="1" ctrlrange="-3.14 3.14"/>
+  </actuator>
+
+  <!-- ===== WORLD ===== -->
+  <worldbody>
+    <light pos="-0.5 0 3.5" dir="0 0 -1" directional="true"/>
+
+    <!-- Floor — name must match LeKiwi's contact pairs -->
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane"/>
+    <!-- Q1 room patch — covers the roommate desk + LeKiwi home start, everywhere
+         else keeps the original floor -->
+    <geom name="room_floor" type="box" pos="0.0 0.5 0.005" size="2.5 2.5 0.005" material="mat_room_floor"/>
+
+    <!-- Cosmos ground ring — 8 distinct-texture 5x5 patches surrounding the room so
+         cameras never see the same starfield pattern repeat in adjacent tiles -->
+    <geom type="box" pos="-5.0 0.5 0.0"  size="2.5 2.5 0.005" material="mat_cosmos_ground_1"/>
+    <geom type="box" pos="5.0 0.5 0.0"   size="2.5 2.5 0.005" material="mat_cosmos_ground_2"/>
+    <geom type="box" pos="0.0 5.5 0.0"   size="2.5 2.5 0.005" material="mat_cosmos_ground_3"/>
+    <geom type="box" pos="0.0 -4.5 0.0"  size="2.5 2.5 0.005" material="mat_cosmos_ground_4"/>
+    <geom type="box" pos="-5.0 5.5 0.0"  size="2.5 2.5 0.005" material="mat_cosmos_ground_2"/>
+    <geom type="box" pos="5.0 5.5 0.0"   size="2.5 2.5 0.005" material="mat_cosmos_ground_1"/>
+    <geom type="box" pos="-5.0 -4.5 0.0" size="2.5 2.5 0.005" material="mat_cosmos_ground_3"/>
+    <geom type="box" pos="5.0 -4.5 0.0"  size="2.5 2.5 0.005" material="mat_cosmos_ground_4"/>
+
+    <!-- Room boundary — physically collidable but near-invisible, keeps LeKiwi from
+         wandering off the wood-floor room patch (matches room_floor's x:-2.5..2.5, y:-2.0..3.0) -->
+    <body name="room_walls" pos="0 0 0">
+      <geom name="room_wall_north" type="box" pos="0 3.0 0.2"  size="2.55 0.025 0.2" rgba="0.6 0.6 0.6 0.15"/>
+      <geom name="room_wall_south" type="box" pos="0 -2.0 0.2" size="2.55 0.025 0.2" rgba="0.6 0.6 0.6 0.15"/>
+      <geom name="room_wall_east"  type="box" pos="2.5 0.5 0.2" size="0.025 2.55 0.2" rgba="0.6 0.6 0.6 0.15"/>
+      <geom name="room_wall_west"  type="box" pos="-2.5 0.5 0.2" size="0.025 2.55 0.2" rgba="0.6 0.6 0.6 0.15"/>
+    </body>
+
+    <!-- Fixed overview camera — top-down bird's eye; screen is edge-on from this angle -->
+    <camera name="cam_overview" pos="-1.0 0.0 5.5" xyaxes="1 0 0 0 1 0" fovy="60"/>
+
+    <!-- ============ Q1: roommate desk + monitor ============ -->
+    <!-- Low monitor on floor stand, face pointing -Y toward Reachy at y=0.1  -->
+    <!-- Screen center at z=0.20 matches eye_camera height at z=0.202          -->
+    <body name="roommate_desk" pos="-1.0 0.7 0.0">
+      <geom name="desk"    type="box" pos="0 0 0.5" size="0.5 0.4 0.03" rgba="0.5 0.3 0.2 1"/>
+      <!-- Desk legs — fill the gap from the desktop (bottom at z=0.47) down to the floor -->
+      <geom name="desk_leg_fl" type="box" pos=" 0.44  0.34 0.235" size="0.03 0.03 0.235" rgba="0.5 0.3 0.2 1"/>
+      <geom name="desk_leg_fr" type="box" pos=" 0.44 -0.34 0.235" size="0.03 0.03 0.235" rgba="0.5 0.3 0.2 1"/>
+      <geom name="desk_leg_bl" type="box" pos="-0.44  0.34 0.235" size="0.03 0.03 0.235" rgba="0.5 0.3 0.2 1"/>
+      <geom name="desk_leg_br" type="box" pos="-0.44 -0.34 0.235" size="0.03 0.03 0.235" rgba="0.5 0.3 0.2 1"/>
+      <geom name="monitor" type="box" pos="0 0.15 0.71" size="0.25 0.02 0.18" rgba="0.05 0.05 0.05 1"/>
+      <geom name="screen"  type="plane" pos="0 0.12 0.71" euler="1.5707963 0 0" size="0.2 0.1 0.001" material="mat_screen_flag" contype="0" conaffinity="0"/>
+      <!-- Plain black "screen off" cover, shown instead of the password until Reachy
+           is prompt-injected — closes the shortcut where any OTHER camera (LeKiwi,
+           SO-ARM100 wrist) with line of sight to the monitor could just read the raw
+           pixels without ever compromising Reachy. Same overlay technique as Q2's
+           restricted_flag/restricted_flag_banner pair, slightly closer to the viewer
+           (smaller Y) so it occludes the real screen until toggled transparent. -->
+      <geom name="screen_off" type="plane" pos="0 0.119 0.71" euler="1.5707963 0 0" size="0.2 0.1 0.001" rgba="0.02 0.02 0.02 1" contype="0" conaffinity="0"/>
+      <site name="screen_text_site" pos="0 0.128 0.71"/>
+    </body>
+
+    <!-- ============ Q4 hint: SOC console (open room area, NW corner) ============ -->
+    <!-- Standalone wall-mounted-style monitor — Q4 (ROS2 hidden topic) has no
+         physical location of its own; this panel just nudges players toward the
+         ROS bridge. Static, no unlock state, screen aspect matches the source
+         image (3596x2084 = ~1.726:1) so it isn't stretched. -->
+    <body name="soc_console" pos="-1.8 1.8 0.0">
+      <geom name="soc_console_panel"  type="box" pos="0 0 0.9" size="0.47 0.02 0.28" rgba="0.1 0.1 0.1 1"/>
+      <geom name="soc_console_screen" type="plane" pos="0 -0.021 0.9" euler="1.5707963 0 0" size="0.45 0.26 0.001" material="mat_soc_console" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- ============ Q2: restricted zone + wall flag ============ -->
+    <body name="restricted_zone" pos="1.2 -0.8 0.0">
+      <geom name="restricted_floor" type="box" pos="0 0 0.011" size="0.6 0.6 0.005" rgba="0.7 0.1 0.1 0.3"/>
+      <geom name="restricted_wall"  type="box" pos="0 0.6 0.5" size="0.6 0.02 0.5" rgba="0.6 0.6 0.6 1"/>
+      <geom name="restricted_flag" type="plane" pos="0 0.57 0.25" euler="1.5707963 0 0" size="0.45 0.15 0.001" material="mat_restricted_flag" contype="0" conaffinity="0"/>
+      <!-- Plain red banner shown instead of the flag until LeKiwi is unlocked AND physically inside the zone -->
+      <geom name="restricted_flag_banner" type="plane" pos="0 0.565 0.25" euler="1.5707963 0 0" size="0.45 0.15 0.001" material="mat_q2_painting" contype="0" conaffinity="0"/>
+      <site name="restricted_flag_site" pos="0 0.571 0.25"/>
+    </body>
+
+    <!-- ============ Q3: painting + hidden compartment ============ -->
+    <!-- Wall grounded at z=0 (like the Q2 restricted_wall) instead of floating;
+         painting/frame/site z-offsets bumped by +0.6 to keep the same world height. -->
+    <body name="painting_zone" pos="1.0 1.2 0.0">
+      <!-- Floor marker for _PAINTING_BOX (app.py) — world x:0.6 to 1.4, y:0.75 to 1.18, i.e.
+           local x:-0.4 to 0.4, y:-0.45 to -0.02. Blue = unsolved, green once flag is caught. -->
+      <geom name="painting_floor" type="box" pos="0 -0.235 0.011" size="0.4 0.215 0.005" rgba="0.25 0.35 0.6 0.35"/>
+      <geom name="wall"     type="box" pos="0 0 0.5" size="0.5 0.02 0.5" rgba="0.85 0.82 0.78 1"/>
+      <!-- Sized 1.6x the old 0.15x0.04 (same 4:1 aspect as painting_flag.png's
+           2048x512 texture) for legibility, while staying inside frame_art's
+           0.27x0.27 half-extents (same center) with a 0.03 margin so the text
+           never pokes out past the door edge when frame_hinge is closed. -->
+      <geom name="painting" type="plane" pos="0 -0.045 0.6" euler="1.5707963 0 0" size="0.24 0.06 0.001" material="mat_painting_flag" contype="0" conaffinity="0"/>
+      <!-- Hinge sits at the frame's left edge (not its center) so the whole door
+           swings clear of the flag when open, instead of sweeping half of itself
+           across the flag's centered position no matter the open angle. -->
+      <body name="frame" pos="-0.31 -0.04 0.6">
+        <joint name="frame_hinge" type="hinge" axis="0 0 -1" range="0 1.4" damping="1"/>
+        <geom name="frame_geom" type="box" pos="0.31 0 0" size="0.31 0.006 0.31" rgba="0.2 0.15 0.1 1" contype="0" conaffinity="0"/>
+        <geom name="frame_art" type="box" pos="0.31 -0.007 0" size="0.27 0.001 0.27" material="mat_mona_lisa_robot" contype="0" conaffinity="0"/>
+      </body>
+      <site name="q3_flag_site" pos="0 0.01 0.6"/>
+    </body>
+
+    <!-- ============ Q5: cube-sorting desk arm station (bottom-left desk) ============ -->
+    <!-- Dedicated, independently-actuated SO-ARM100 fixed to its own desk — separate
+         hardware from LeKiwi's mobile arm, attached a second time (prefix arm2_) so
+         mujoco names stay unique (arm2_Rotation, arm2_wrist camera, etc). Body/geom
+         names below keep the historical "poisoning_desk" identifier prefix — renaming
+         it is a larger, unrelated refactor; the challenge concept itself is now
+         cube-sorting via ACT policy upload, not model poisoning. -->
+    <body name="poisoning_desk" pos="-1.6 -1.3 0.0">
+      <geom name="poisoning_desk_top"    type="box" pos="0 0 0.5" size="0.4 0.35 0.03" rgba="0.5 0.3 0.2 1"/>
+      <geom name="poisoning_desk_leg_fl" type="box" pos=" 0.34  0.29 0.235" size="0.03 0.03 0.235" rgba="0.5 0.3 0.2 1"/>
+      <geom name="poisoning_desk_leg_fr" type="box" pos=" 0.34 -0.29 0.235" size="0.03 0.03 0.235" rgba="0.5 0.3 0.2 1"/>
+      <geom name="poisoning_desk_leg_bl" type="box" pos="-0.34  0.29 0.235" size="0.03 0.03 0.235" rgba="0.5 0.3 0.2 1"/>
+      <geom name="poisoning_desk_leg_br" type="box" pos="-0.34 -0.29 0.235" size="0.03 0.03 0.235" rgba="0.5 0.3 0.2 1"/>
+      <body name="arm2_mount_link" pos="0 0 0.53" euler="0 0 1.5708">
+        <attach model="so_arm100" body="Base" prefix="arm2_"/>
+      </body>
+
+      <!-- ===== Q5 cube-sorting playfield (local coords; desk top at local z=0.53) =====
+           Layout is all TUNABLE — architect refines against live arm2 reach.
+           Zones sit at back (+y); cubes start in a front row (-y). -->
+
+      <!-- Zone tiles (decorative overlay, no collision). Each ~0.20x0.20, thin box on
+           the desktop, showing its label. XY box centers/half-extents are read by the
+           sim to test which zone a cube's center lies in. -->
+      <geom name="q5_zone1_tile" type="box" pos="-0.22 0.18 0.531" size="0.10 0.10 0.001" material="mat_zone_1" contype="0" conaffinity="0"/>
+      <geom name="q5_zone2_tile" type="box" pos="0.0 0.18 0.531"  size="0.10 0.10 0.001" material="mat_zone_2" contype="0" conaffinity="0"/>
+      <geom name="q5_zone3_tile" type="box" pos="0.22 0.18 0.531" size="0.10 0.10 0.001" material="mat_zone_3" contype="0" conaffinity="0"/>
+
+      <!-- Solved check-mark overlays — start fully transparent (alpha 0), sim.py sets
+           alpha 1 when the matching zone latches. Same alpha-toggle trick as Q2/Q3. -->
+      <geom name="q5_zone1_check" type="box" pos="-0.22 0.18 0.533" size="0.075 0.075 0.001" material="mat_zone_check" rgba="1 1 1 0" contype="0" conaffinity="0"/>
+      <geom name="q5_zone2_check" type="box" pos="0.0 0.18 0.533"  size="0.075 0.075 0.001" material="mat_zone_check" rgba="1 1 1 0" contype="0" conaffinity="0"/>
+      <geom name="q5_zone3_check" type="box" pos="0.22 0.18 0.533" size="0.075 0.075 0.001" material="mat_zone_check" rgba="1 1 1 0" contype="0" conaffinity="0"/>
+
+      <!-- Flag "wallpaper" + opaque cover — sized to cube_flag.png's 3:2 aspect
+           and spans nearly the full desk footprint (poisoning_desk_top is
+           0.4x0.35 half-extents). Sits just above the desk surface (z=0.53)
+           but BELOW the zone tiles/cubes/button (z>=0.531) so those still
+           render on top without z-fighting. Cover starts desk-colored/opaque
+           and is made transparent (alpha 0) on Q5 solve, revealing the flag —
+           same occlusion trick as Q3's frame. -->
+      <geom name="q5_flag_tile"  type="box" pos="0 0 0.5305" size="0.4 0.2667 0.0005" material="mat_q5_flag" contype="0" conaffinity="0"/>
+      <geom name="q5_flag_cover" type="box" pos="0 0 0.5308" size="0.4 0.2667 0.0005" rgba="0.5 0.3 0.2 1" contype="0" conaffinity="0"/>
+
+      <!-- Q5 playfield camera — fixed overhead-front view of the whole desk (zones,
+           cubes, button, flag tile) for players to watch policy replays; served as
+           cam=q5_desk by /cameras and /stream. targetbody keeps it aimed at the
+           desk-top center (arm2_mount_link) without hand-tuned euler angles. -->
+      <camera name="q5_desk_cam" mode="targetbody" target="arm2_mount_link" pos="0 -0.60 1.25" fovy="52"/>
+
+      <!-- Q5 goal button — hidden (alpha 0) until all three zones latch, then shown
+           by sim.py; the arm must press it (fingertip proximity to the cap, tested
+           in sim.py q5_update) to finally reveal the flag. No collision: the press
+           is virtual, so a mis-aimed arm can't shove the button around. -->
+      <geom name="q5_button_base" type="cylinder" pos="0.3 0 0.538" size="0.032 0.008" rgba="0.35 0.35 0.38 0" contype="0" conaffinity="0"/>
+      <geom name="q5_button_cap"  type="cylinder" pos="0.3 0 0.55"  size="0.022 0.012" rgba="0.85 0.1 0.1 0" contype="0" conaffinity="0"/>
+
+      <!-- Virtual perimeter walls — thin COLLISION boxes just inside the desk edges,
+           tall enough (top at z=0.59) that a 0.02-half cube can't be shoved off. -->
+      <geom name="q5_wall_north" type="box" pos="0 0.345 0.56"  size="0.4 0.005 0.03" rgba="0.6 0.6 0.6 0.15"/>
+      <geom name="q5_wall_south" type="box" pos="0 -0.345 0.56" size="0.4 0.005 0.03" rgba="0.6 0.6 0.6 0.15"/>
+      <geom name="q5_wall_east"  type="box" pos="0.395 0 0.56"  size="0.005 0.35 0.03" rgba="0.6 0.6 0.6 0.15"/>
+      <geom name="q5_wall_west"  type="box" pos="-0.395 0 0.56" size="0.005 0.35 0.03" rgba="0.6 0.6 0.6 0.15"/>
+    </body>
+
+    <!-- ===== Q5 sorting cubes — free bodies, MUST be top-level (freejoint rule) =====
+         World pos = poisoning_desk(-1.6,-1.3,0) + local(x,y) + rest z 0.55 (desk top
+         0.53 + 0.02 half). Two per color/value: red=2, blue=4, green=5. All start in a
+         front row, clear of every zone. Mass/friction and layout are TUNABLE. -->
+    <body name="q5_cube_red_1" pos="-1.85 -1.42 0.55">
+      <freejoint name="q5_cube_red_1_joint"/>
+      <geom name="q5_cube_red_1_geom" type="box" size="0.02 0.02 0.02" material="mat_cube_2" mass="0.02" friction="1 0.01 0.001"/>
+    </body>
+    <body name="q5_cube_red_2" pos="-1.75 -1.42 0.55">
+      <freejoint name="q5_cube_red_2_joint"/>
+      <geom name="q5_cube_red_2_geom" type="box" size="0.02 0.02 0.02" material="mat_cube_2" mass="0.02" friction="1 0.01 0.001"/>
+    </body>
+    <body name="q5_cube_blue_1" pos="-1.65 -1.42 0.55">
+      <freejoint name="q5_cube_blue_1_joint"/>
+      <geom name="q5_cube_blue_1_geom" type="box" size="0.02 0.02 0.02" material="mat_cube_4" mass="0.02" friction="1 0.01 0.001"/>
+    </body>
+    <body name="q5_cube_blue_2" pos="-1.55 -1.42 0.55">
+      <freejoint name="q5_cube_blue_2_joint"/>
+      <geom name="q5_cube_blue_2_geom" type="box" size="0.02 0.02 0.02" material="mat_cube_4" mass="0.02" friction="1 0.01 0.001"/>
+    </body>
+    <body name="q5_cube_green_1" pos="-1.45 -1.42 0.55">
+      <freejoint name="q5_cube_green_1_joint"/>
+      <geom name="q5_cube_green_1_geom" type="box" size="0.02 0.02 0.02" material="mat_cube_5" mass="0.02" friction="1 0.01 0.001"/>
+    </body>
+    <body name="q5_cube_green_2" pos="-1.35 -1.42 0.55">
+      <freejoint name="q5_cube_green_2_joint"/>
+      <geom name="q5_cube_green_2_geom" type="box" size="0.02 0.02 0.02" material="mat_cube_5" mass="0.02" friction="1 0.01 0.001"/>
+    </body>
+
+    <!-- ============ LeKiwi — center of room, next to Reachy Mini ============ -->
+    <body name="base_plate_layer_1_link" pos="-0.5 -0.5 0.035" euler="0.0 0.0 0.0">
+      <joint type="free" damping="5"/>
+      <inertial mass="0.2" pos="0 0 0"/>
+      <geom type="mesh" mesh="base_plate" material="lekiwi_black" pos="0 0 0" euler="0 0 -1.5708"/>
+      <!-- lekiwi_front: mounted on base body, 12cm up, facing +Y, slight downward tilt -->
+      <camera name="lekiwi_front" mode="fixed" fovy="70" pos="0 0 0.12" euler="1.65 0 0"/>
+      <body name="drive_motor_mount_back_link" pos="-0.09 0.02061 0.002" euler="0 0 -3.14159">
+        <geom class="drive_motor_mount"/>
+        <inertial mass="0.035884017191401885" pos="0.00017900181977195112 -0.0006914486154622601 0.0004348187449640745" fullinertia="3.2235542654871883e-06 3.901284246443171e-06 6.890721819180175e-06 -1.4488185386067676e-08 -3.4701845947883736e-08 1.0877684749210782e-07"/>
+        <body name="servo_motor_back_link" pos="0.0096 -0.00489 0.01436" euler="0 0 -1.5708">
+          <geom class="servo_motor"/>
+          <inertial mass="0.0658962961901927" pos="-0.014664257020729004 -0.008722816656342332 1.2191853053420506e-06" fullinertia="1.0300908387946657e-05 1.3913691655689984e-05 1.8215748982019662e-05 1.1951581712694353e-07 -1.7998869276644268e-09 8.88550145137008e-10"/>
+          <body name="wheel_hub_back_link" pos="-0.0255 0.0111875 0" euler="-1.5708 0 3.14159">
+            <joint name="base_back_wheel_joint" class="wheel_hub"/>
+            <geom class="wheel_hub"/>
+            <inertial mass="0.08665496109754897" pos="8.50877658112488e-09 7.358945011137765e-09 0.0023811166424899887" fullinertia="1.2296291761641504e-05 1.2296276073121143e-05 2.2911778015411222e-05 -3.19167294920219e-12 1.755992026942528e-12 1.5186622033709633e-12"/>
+            <body name="wheel_back_link" pos="0 0 0.01746" euler="-3.14159 0 0">
+              <geom class="wheel_visual"/>
+              <geom name="wheel_back_collision" class="wheel_collision"/>
+              <inertial mass="1.3542854082324305" pos="-7.105207895657716e-08 -1.1369917947312704e-07 -1.2090586078983279e-08" fullinertia="0.0010936200374455458 0.0010936108480286116 0.0018798127501507855 -5.245142023675448e-09 4.046730352778215e-10 1.0004485488405523e-10"/>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="drive_motor_mount_right_link" pos="0.02715 -0.08825 0.002" euler="0 0 -1.0472">
+        <geom class="drive_motor_mount"/>
+        <inertial mass="0.035884017191401885" pos="0.00017900181977195112 -0.0006914486154622601 0.0004348187449640745" fullinertia="3.2235542654871883e-06 3.901284246443171e-06 6.890721819180175e-06 -1.4488185386067676e-08 -3.4701845947883736e-08 1.0877684749210782e-07"/>
+        <body name="servo_motor_right_link" pos="0.0096 -0.00489 0.01436" euler="0 0 -1.5708">
+          <geom class="servo_motor"/>
+          <inertial mass="0.0658962961901927" pos="-0.014664257020729004 -0.008722816656342332 1.2191853053420506e-06" fullinertia="1.0300908387946657e-05 1.3913691655689984e-05 1.8215748982019662e-05 1.1951581712694353e-07 -1.7998869276644268e-09 8.88550145137008e-10"/>
+          <body name="wheel_hub_right_link" pos="-0.0255 0.0111875 0" euler="-1.5708 0 3.14159">
+            <joint name="base_right_wheel_joint" class="wheel_hub"/>
+            <geom class="wheel_hub"/>
+            <inertial mass="0.08665496109754897" pos="8.50877658112488e-09 7.358945011137765e-09 0.0023811166424899887" fullinertia="1.2296291761641504e-05 1.2296276073121143e-05 2.2911778015411222e-05 -3.19167294920219e-12 1.755992026942528e-12 1.5186622033709633e-12"/>
+            <body name="wheel_right_link" pos="0 0 0.01746" euler="-3.14159 0 0">
+              <geom class="wheel_visual"/>
+              <geom name="wheel_right_collision" class="wheel_collision"/>
+              <inertial mass="1.3542854082324305" pos="-7.105207895657716e-08 -1.1369917947312704e-07 -1.2090586078983279e-08" fullinertia="0.0010936200374455458 0.0010936108480286116 0.0018798127501507855 -5.245142023675448e-09 4.046730352778215e-10 1.0004485488405523e-10"/>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="drive_motor_mount_left_link" pos="0.06284878357844971 0.06763728633687423 0.0020000000000000018" euler="0.0 0.0 1.0472">
+        <geom class="drive_motor_mount"/>
+        <inertial mass="0.035884017191401885" pos="0.00017900181977195112 -0.0006914486154622601 0.0004348187449640745" fullinertia="3.2235542654871883e-06 3.901284246443171e-06 6.890721819180175e-06 -1.4488185386067676e-08 -3.4701845947883736e-08 1.0877684749210782e-07"/>
+        <body name="servo_motor_left_link" pos="0.0096 -0.00489 0.01436" euler="0 0 -1.5708">
+          <geom class="servo_motor"/>
+          <inertial mass="0.0658962961901927" pos="-0.014664257020729004 -0.008722816656342332 1.2191853053420506e-06" fullinertia="1.0300908387946657e-05 1.3913691655689984e-05 1.8215748982019662e-05 1.1951581712694353e-07 -1.7998869276644268e-09 8.88550145137008e-10"/>
+          <body name="wheel_hub_left_link" pos="-0.0255 0.0111875 0" euler="-1.5708 0 3.14159">
+            <joint name="base_left_wheel_joint" class="wheel_hub"/>
+            <geom class="wheel_hub"/>
+            <inertial mass="0.08665496109754897" pos="8.50877658112488e-09 7.358945011137765e-09 0.0023811166424899887" fullinertia="1.2296291761641504e-05 1.2296276073121143e-05 2.2911778015411222e-05 -3.19167294920219e-12 1.755992026942528e-12 1.5186622033709633e-12"/>
+            <body name="wheel_left_link" pos="0 0 0.01746" euler="-3.14159 0 0">
+              <geom class="wheel_visual"/>
+              <geom name="wheel_left_collision" class="wheel_collision"/>
+              <inertial mass="1.3542854082324305" pos="-7.105207895657716e-08 -1.1369917947312704e-07 -1.2090586078983279e-08" fullinertia="0.0010936200374455458 0.0010936108480286116 0.0018798127501507855 -5.245142023675448e-09 4.046730352778215e-10 1.0004485488405523e-10"/>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="servo_controller_mount_link" pos="0.06 0.0 0.0029999999999999983" euler="-0.0 0.0 -0.0">
+        <geom type="mesh" mesh="servo_controller_mount" pos="0 0 0" euler="0 0 0"/>
+        <inertial mass="0.06175589411431898" pos="-3.6769132064861433e-14 0.0 -0.0012090515491760903" fullinertia="1.0761471541836937e-05 1.8890192778258753e-05 2.9413765100515303e-05 2.602085214051591e-22 -6.608103581422321e-19 1.6940658945086007e-21"/>
+      </body>
+      <body name="lipo_battery_mount_link" pos="-0.02 0.00 0.0" euler="0.0 0.0 0.0">
+        <geom type="mesh" mesh="lipo_battery_mount" pos="0 0 0" euler="0 0 0"/>
+        <inertial mass="0.1653518573066047" pos="-4.0023770071114873e-16 -0.003034408758946965 0.003481111705280585" fullinertia="9.882008372625315e-05 7.479150401991051e-05 0.0001696386060861471 4.0216183619824973e-19 -1.283332239482784e-19 2.263422861539775e-06"/>
+        <body name="battery" pos="2.220446049250313e-18 0.036499999999999984 0.003000000000000007" euler="-1.5707963267948966 6.123233995736767e-17 -1.5707963267948966">
+          <geom type="mesh" mesh="battery" pos="0 0 0" euler="0 0 0"/>
+          <inertial mass="1.2215469988184764" pos="0.020000000000000018 -8.300646300726007e-05 -0.03492202423172039" fullinertia="0.0008162228074590446 0.00065975897252246 0.00047597821218279645 1.3010426069826053e-18 4.3368086899420163e-19 3.135378714781114e-06"/>
+        </body>
+      </body>
+      <body name="camera_mount_link" pos="0.1 0.0 0.0" euler="0.0 0.0 0.0">
+        <geom type="mesh" mesh="camera_mount" pos="0 0 0" euler="0 0 0"/>
+        <inertial mass="0.09147094298688183" pos="0.0030289224720198397 0.00011242904514014542 0.02064739422580405" fullinertia="3.4924657273467044e-05 1.7958936503269972e-05 1.8461671554877027e-05 -2.8535574628355763e-08 1.483173255618039e-06 1.1115307183257866e-07"/>
+        <body name="camera_link" pos="0.005843306737767851 0 0.02401122309705938" euler="0.0 1.37 0.0">
+          <geom type="mesh" mesh="lekiwi_camera" pos="0 0 0" euler="0 0 0"/>
+          <inertial mass="0.039920058315088616" pos="0.00011860470791938802 0.00023881874959842783 0.004326318838629241" fullinertia="5.219349028990072e-06 5.305573488496055e-06 7.674281395938296e-06 6.564111916115197e-08 1.3381791184156136e-08 2.6971366213773554e-08"/>
+          <camera name="lekiwi_front_old" mode="fixed" resolution="640 480" fovy="70" pos="0.05 0 0" euler="0 3.14 -1.57"/>
+        </body>
+      </body>
+      <body name="hex_standoff_center_link" pos="0 0 0.025" euler="0.0 0.0 -0.0">
+        <geom type="mesh" mesh="hex_standoff" pos="0 0 0" euler="0 0 0"/>
+        <inertial mass="0.006150070863406618" pos="2.1866952693017084e-14 -1.2010287431252216e-09 -6.6970201384464195e-09" fullinertia="1.0965196650850481e-06 1.0965196548945726e-06 1.8373964931137077e-08 3.3881317890172236e-20 2.698646969952201e-18 -9.149560204254155e-14"/>
+      </body>
+      <body name="hex_standoff_1_link" pos="0.03267949192431126 0.09660254037844385 0.025" euler="0.0 0.0 -0.0">
+        <geom type="mesh" mesh="hex_standoff" pos="0 0 0" euler="0 0 0"/>
+        <inertial mass="0.006150070863406618" pos="2.1866952693017084e-14 -1.2010287431252216e-09 -6.6970201384464195e-09" fullinertia="1.0965196650850481e-06 1.0965196548945726e-06 1.8373964931137077e-08 3.3881317890172236e-20 2.698646969952201e-18 -9.149560204254155e-14"/>
+      </body>
+      <body name="hex_standoff_2_link" pos="-0.1 -0.02 0.025" euler="0.0 0.0 -0.0">
+        <geom type="mesh" mesh="hex_standoff" pos="0 0 0" euler="0 0 0"/>
+        <inertial mass="0.006150070863406618" pos="2.1862511800918584e-14 -1.2010287342434374e-09 -6.6970201384464195e-09" fullinertia="1.096519665085043e-06 1.0965196548945802e-06 1.837396493115063e-08 3.2187251995663636e-20 2.6969529040576923e-18 -9.14956011955086e-14"/>
+      </body>
+      <body name="hex_standoff_3_link" pos="0.06732050807568875 -0.0766025403784439 0.025" euler="0.0 0.0 -0.0">
+        <geom type="mesh" mesh="hex_standoff" pos="0 0 0" euler="0 0 0"/>
+        <inertial mass="0.006150070863406618" pos="2.1866952693017084e-14 -1.2010287342434374e-09 -6.6970201384464195e-09" fullinertia="1.096519665085043e-06 1.0965196548945862e-06 1.8373964931164182e-08 2.7105054312137834e-20 2.6969529040576923e-18 -9.149559950144271e-14"/>
+      </body>
+      <body name="base_plate_layer_2_link" pos="0.0 0.0 0.057" euler="-0.0 0.0 -0.0">
+        <geom type="mesh" mesh="base_plate" material="lekiwi_black" pos="0 0 0" euler="0 0 -1.5708"/>
+        <inertial mass="0.2" pos="0 0 0"/>
+        <body name="sbc_case_bottom_link" pos="-0.064 0 0" euler="0.0 0.0 1.5708">
+          <geom type="mesh" mesh="sbc_case_bottom" pos="0 0 0" euler="0 0 0"/>
+          <inertial mass="0.14588862570926195" pos="-0.00162379917481353 0.0017514442972537737 0.0028600223736592917" fullinertia="5.861212367196976e-05 0.000126485904877694 0.00018209683987627657 1.504419769130799e-06 2.5907710844293906e-06 -7.708271472892189e-07"/>
+          <body name="sbc_case_top_link" pos="0 0.0 0.02899957050948762" euler="-3.141592653589793 0.0 0.0">
+            <geom type="mesh" mesh="sbc_case_top" pos="0 0 0" euler="0 0 0"/>
+            <inertial mass="0.1256590419653392" pos="-0.0036436981408919968 -0.0003259633563240798 0.004946871759115404" fullinertia="5.8982381320791524e-05 0.00013338786905954623 0.00018586375094365218 1.6170683703385845e-07 2.7949770042390678e-06 -5.073018525688329e-07"/>
+          </body>
+        </body>
+        <body name="so_arm100_link" pos="0.022 0 0" euler="0 0 1.5708">
+          <attach model="so_arm100" body="Base" prefix="arm_"/>
+        </body>
+      </body>
+    </body>
+
+  </worldbody>
+
+  <!-- LeKiwi omni-wheel contact pairs -->
+  <contact>
+    <pair name="omniwheel_back"  geom1="floor" geom2="wheel_back_collision"  condim="3" friction="0.05 1."/>
+    <pair name="omniwheel_left"  geom1="floor" geom2="wheel_left_collision"  condim="3" friction="0.05 1."/>
+    <pair name="omniwheel_right" geom1="floor" geom2="wheel_right_collision" condim="3" friction="0.05 1."/>
+  </contact>
+
+</mujoco>
